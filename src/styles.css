@@ -87,6 +87,16 @@ html, body {
 }
 
 /* ── Terminal window wrapper ── */
+/* .terminal-window must be a flex column itself so the <pre id="terminal">
+   child's `flex: 1` actually resolves — otherwise the pre collapses to
+   its content height (one line tall) and fzt renders only the prompt. */
+.terminal-window {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 #terminal {
   flex: 1;
   min-height: 0;
