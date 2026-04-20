@@ -6,8 +6,6 @@
 
 const { invoke } = window.__TAURI__.core;
 
-// Fallback tree when fzt-automate hasn't hydrated menu-cache.yaml yet
-// (fresh install or cache cleared). Shown instead of an empty terminal.
 const FALLBACK_YAML = `- name: "fzt-automate menu not found"
   description: "run fzt-automate once to hydrate ~/.fzt-automate/menu-cache.yaml"
   children:
@@ -52,8 +50,6 @@ async function handleAction(action, url) {
   }
 }
 
-// Fetches fzt-automate's menu-cache.yaml via the Rust load_menu command.
-// Returns the YAML string on success, null on failure (caller falls back).
 async function loadMenu() {
   try {
     return await invoke("load_menu");
@@ -79,7 +75,12 @@ async function init() {
     return;
   }
 
+  // Matching fzh-terminal.js's wrapper options. containerPadding:8 leaves
+  // breathing room inside the CRT border; defaultCursorPos:null hides the
+  // cursor when fzt doesn't emit one rather than placing it at a stub spot.
   const term = createFztWeb(terminalEl, {
+    containerPadding: 8,
+    defaultCursorPos: null,
     onAction: (action, url) => handleAction(action, url),
   });
 
@@ -91,12 +92,26 @@ async function init() {
     return;
   }
 
+  // Register frontend identity (affects the `:` palette injection). No
+  // commands yet; we'll add them when fzt-desktop grows its own. Matches
+  // fzh-terminal's setFrontend call shape.
+  term.setFrontend({ name: "fzt-desktop", version: "dev" });
+
   const menu = await loadMenu();
-  term.loadYAML(menu || FALLBACK_YAML);
+  const yaml = menu || FALLBACK_YAML;
+  const yamlOK = term.loadYAML(yaml);
+
+  // Diagnostic: until the "empty tree on load" mystery is resolved, dump
+  // the observable inputs so we can see what init saw. Removed once the
+  // root cause lands.
+  const rect = terminalEl.getBoundingClientRect();
+  const diag = `yaml=${yaml.length}B load=${yamlOK} box=${Math.round(rect.width)}x${Math.round(rect.height)} charset=${typeof menu}`;
+  console.log("[fzt-desktop]", diag);
+
   term.init();
 
   document.getElementById("loading")?.classList.add("hidden");
-  if (menu) setStatus("ready");
+  setStatus(diag);
   terminalEl.focus();
 }
 
