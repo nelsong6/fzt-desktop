@@ -6,24 +6,17 @@
 
 const { invoke } = window.__TAURI__.core;
 
-// Placeholder tree shown until fzt-automate's real menu source lands.
-// Items with a `url` open the default browser; items with `action:
-// <cmd>` route through the hidden pwsh runspace for silent execution.
-const SAMPLE_YAML = `- name: fzt-desktop
-  description: scaffold — replace this tree with fzt-automate's menu
+// Fallback tree when fzt-automate hasn't hydrated menu-cache.yaml yet
+// (fresh install or cache cleared). Shown instead of an empty terminal.
+const FALLBACK_YAML = `- name: "fzt-automate menu not found"
+  description: "run fzt-automate once to hydrate ~/.fzt-automate/menu-cache.yaml"
   children:
-    - name: echo hello
-      description: pwsh smoke test via run_command
-      action: Write-Output hello
-    - name: get-date
-      description: pwsh smoke test via run_command
-      action: Get-Date
-    - name: Tauri docs
-      description: opens in default browser
-      url: https://tauri.app
-    - name: fzt-browser
-      description: source of this WASM
-      url: https://github.com/nelsong6/fzt-browser
+    - name: "fzt-automate repo"
+      description: "where the CLI lives"
+      url: https://github.com/nelsong6/fzt-automate
+    - name: "this app's readme"
+      description: "setup + dev notes"
+      url: https://github.com/nelsong6/fzt-desktop
 `;
 
 function setStatus(text, kind = "") {
@@ -59,6 +52,17 @@ async function handleAction(action, url) {
   }
 }
 
+// Fetches fzt-automate's menu-cache.yaml via the Rust load_menu command.
+// Returns the YAML string on success, null on failure (caller falls back).
+async function loadMenu() {
+  try {
+    return await invoke("load_menu");
+  } catch (err) {
+    setStatus(`menu-cache unavailable: ${err}`, "err");
+    return null;
+  }
+}
+
 async function init() {
   const terminalEl = document.getElementById("terminal");
   if (!terminalEl) return;
@@ -87,11 +91,12 @@ async function init() {
     return;
   }
 
-  term.loadYAML(SAMPLE_YAML);
+  const menu = await loadMenu();
+  term.loadYAML(menu || FALLBACK_YAML);
   term.init();
 
   document.getElementById("loading")?.classList.add("hidden");
-  setStatus("ready");
+  if (menu) setStatus("ready");
   terminalEl.focus();
 }
 
