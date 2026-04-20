@@ -49,7 +49,19 @@ Tauri 2 shell (Rust, src-tauri/)
 
 ## Status
 
-Scaffold only. Default Tauri 2 vanilla-JS template. No fzt integration, no pwsh runspace, no pixel art, no ambience subscription yet.
+First working demo as of 2026-04-20. fzt-automate's menu (`~/.fzt-automate/menu-cache.yaml`) loads into the terminal on boot via the Tauri `load_menu` command; selecting a URL item opens the default browser via tauri-plugin-opener; selecting a command item (`action:` field) runs silently in a warm pwsh runspace via `run_command` and surfaces stdout/stderr in the status line. Ambience rain canvas is live behind the terminal (subscribes to `ambience.romaine.life/events`).
+
+**End-to-end shell-command integration testing deferred** — the `run_command` path works for raw PowerShell (`Write-Output hello`, `Get-Date`) but at-commands like `gitprune` require `FZT_DESKTOP_PWSH_INIT` set to a script that dot-sources the at-command definitions. Full validation across Nelson's menu landed next session.
+
+## Local dev setup
+
+```sh
+npm install
+npm run fetch-fzt    # pulls fzt.wasm + fzt-terminal.{js,css} + fzt-web.js from fzt-browser latest release
+npm run tauri dev    # first build compiles ~200 Rust crates (~2 min); incremental is instant
+```
+
+Optional: set `FZT_DESKTOP_PWSH_INIT` to a `.ps1` path (e.g. your at-commands.ps1) before launching, so selections routed through `run_command` can invoke user-defined PS functions.
 
 ## Related session
 

@@ -98,20 +98,11 @@ async function init() {
   term.setFrontend({ name: "fzt-desktop", version: "dev" });
 
   const menu = await loadMenu();
-  const yaml = menu || FALLBACK_YAML;
-  const yamlOK = term.loadYAML(yaml);
-
-  // Diagnostic: until the "empty tree on load" mystery is resolved, dump
-  // the observable inputs so we can see what init saw. Removed once the
-  // root cause lands.
-  const rect = terminalEl.getBoundingClientRect();
-  const diag = `yaml=${yaml.length}B load=${yamlOK} box=${Math.round(rect.width)}x${Math.round(rect.height)} charset=${typeof menu}`;
-  console.log("[fzt-desktop]", diag);
-
+  term.loadYAML(menu || FALLBACK_YAML);
   term.init();
 
   document.getElementById("loading")?.classList.add("hidden");
-  setStatus(diag);
+  if (menu) setStatus("ready");
   terminalEl.focus();
 }
 
