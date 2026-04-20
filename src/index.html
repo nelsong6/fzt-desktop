@@ -2,38 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
+    <title>fzt-desktop</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- fzt-terminal.css is downloaded from fzt-browser release at build
+         time and copied alongside these files. Dev-only: optional. -->
+    <link rel="stylesheet" href="fzt-terminal.css" onerror="this.remove()" />
     <script type="module" src="/main.js" defer></script>
   </head>
-
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <!-- Pixel-art layer — z-index 0, rendered via canvas. Populated by
+         the ambience client once wired. -->
+    <canvas id="ambience-canvas"></canvas>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
+    <!-- Main app surface — sits above the canvas -->
+    <div class="page">
+      <!-- fzt-automate terminal will mount here once fzt.wasm is wired -->
+      <div id="terminal" class="fzt-terminal-window">
+        <pre id="terminal-content">fzt-desktop scaffold — fzt.wasm integration pending</pre>
       </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
+      <!-- Status line for silent command execution feedback -->
+      <div id="status" class="status-line"></div>
+    </div>
+
+    <!-- Loading overlay, hidden once fzt.wasm boots -->
+    <div id="loading" class="loading hidden">Loading fzt...</div>
   </body>
 </html>

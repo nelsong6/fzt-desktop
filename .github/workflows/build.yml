@@ -1,0 +1,75 @@
+name: Build
+
+# Called by the release template AFTER it cuts a tag. Builds the Tauri
+# app (Rust + WebView2 shell + downloaded fzt.wasm) and uploads the
+# installer + portable exe to the existing release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build artifacts for (and upload to)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      # ── Rust (Tauri shell) ─────────────────────────────────────
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rust-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rust-
+
+      # ── Node (frontend tooling) ────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # ── fzt.wasm + JS runtime from fzt-browser release ─────────
+      - name: Download fzt assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --repo nelsong6/fzt-browser \
+            --pattern "fzt.wasm" \
+            --pattern "fzt-terminal.js" \
+            --pattern "fzt-terminal.css" \
+            --pattern "fzt-web.js" \
+            --dir src
+
+      # ── Install + build ────────────────────────────────────────
+      - name: Install JS deps
+        shell: bash
+        run: npm ci
+
+      - name: Build Tauri bundle
+        shell: bash
+        run: npm run tauri build
+
+      # ── Upload installer + portable exe to release ─────────────
+      - name: Upload assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ inputs.tag }} \
+            src-tauri/target/release/bundle/nsis/*.exe \
+            src-tauri/target/release/bundle/msi/*.msi \
+            --clobber \
+            -R ${{ github.repository }}
