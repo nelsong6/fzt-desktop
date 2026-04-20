@@ -1,41 +1,31 @@
-// fzt-desktop frontend — Tauri 2 + vanilla JS.
+// fzt-desktop entry — loads fzt.wasm, mounts the terminal, wires
+// keyboard + action routing, and surfaces pwsh output via run_command.
 //
-// This is a scaffold. Real integrations land in subsequent commits:
-//   - fzt.wasm loading (from fzt-browser release, bundled by CI)
-//   - Ambience SSE subscription + keystroke publish-back
-//   - Hidden pwsh runspace via Tauri `invoke('run_command', ...)`
-//
-// For now this just boots the canvas so the visual surface is obvious
-// when `tauri dev` is run.
+// ambience-client.js auto-initializes the pixel-art layer from the
+// <canvas data-ambience> element; nothing to wire for that here.
 
 const { invoke } = window.__TAURI__.core;
 
-// ── Ambience canvas (pixel-art layer) ─────────────────────────────
-// Placeholder for the entropy-driven pixel art that was the originating
-// use case. Will subscribe to ambience.romaine.life SSE once wired.
-function initAmbienceCanvas() {
-  const canvas = document.getElementById("ambience-canvas");
-  if (!canvas) return;
+// Placeholder tree shown until fzt-automate's real menu source lands.
+// Items with a `url` open the default browser; items with `action:
+// <cmd>` route through the hidden pwsh runspace for silent execution.
+const SAMPLE_YAML = `- name: fzt-desktop
+  description: scaffold — replace this tree with fzt-automate's menu
+  children:
+    - name: echo hello
+      description: pwsh smoke test via run_command
+      action: Write-Output hello
+    - name: get-date
+      description: pwsh smoke test via run_command
+      action: Get-Date
+    - name: Tauri docs
+      description: opens in default browser
+      url: https://tauri.app
+    - name: fzt-browser
+      description: source of this WASM
+      url: https://github.com/nelsong6/fzt-browser
+`;
 
-  const resize = () => {
-    canvas.width = window.innerWidth * devicePixelRatio;
-    canvas.height = window.innerHeight * devicePixelRatio;
-  };
-  resize();
-  window.addEventListener("resize", resize);
-
-  // Marks the body so fzt-terminal background goes transparent and the
-  // canvas shows through — matches fzt-showcase's ambience-on pattern.
-  document.body.classList.add("ambience-on");
-
-  // Future: const source = new EventSource("https://ambience.romaine.life/events");
-  // Future: render entropy-driven pixel art to the canvas here
-}
-
-// ── Status line ───────────────────────────────────────────────────
-// Small feedback surface for silent command execution. When fzt-automate
-// selects an at-command, the Rust side runs it in the hidden pwsh
-// runspace and the result lands here.
 function setStatus(text, kind = "") {
   const el = document.getElementById("status");
   if (!el) return;
@@ -43,16 +33,66 @@ function setStatus(text, kind = "") {
   el.className = "status-line" + (kind ? " " + kind : "");
 }
 
-// ── Boot ───────────────────────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", () => {
-  initAmbienceCanvas();
-  setStatus("scaffold ready — fzt.wasm not yet wired");
+async function handleAction(action, url) {
+  if (!action || !action.startsWith("select:")) return;
 
-  // Keep the greet invoke around as a live Rust-side test until we have
-  // real Tauri commands. Safe to delete once `run_command` lands.
-  if (typeof invoke === "function") {
-    invoke("greet", { name: "fzt-desktop" })
-      .then((msg) => console.log("[rust]", msg))
-      .catch((err) => console.warn("[rust] greet failed:", err));
+  if (url) {
+    const opener = window.__TAURI__?.opener;
+    try {
+      if (opener?.openUrl) await opener.openUrl(url);
+      else window.open(url, "_blank");
+    } catch (err) {
+      setStatus(`open failed: ${err}`, "err");
+    }
+    return;
   }
-});
+
+  const cmd = action.slice("select:".length).trim();
+  if (!cmd) return;
+
+  setStatus(`running: ${cmd}`);
+  try {
+    const stdout = await invoke("run_command", { cmd });
+    setStatus(stdout.trim() || `done: ${cmd}`, "ok");
+  } catch (stderr) {
+    setStatus(`err: ${String(stderr).trim()}`, "err");
+  }
+}
+
+async function init() {
+  const terminalEl = document.getElementById("terminal");
+  if (!terminalEl) return;
+
+  let createFztWeb;
+  try {
+    ({ createFztWeb } = await import("./fzt-web.js"));
+  } catch (_err) {
+    setStatus(
+      "fzt-web.js missing — run 'npm run fetch-fzt' in the repo root",
+      "err",
+    );
+    document.getElementById("loading")?.classList.add("hidden");
+    return;
+  }
+
+  const term = createFztWeb(terminalEl, {
+    onAction: (action, url) => handleAction(action, url),
+  });
+
+  try {
+    await term.initWasm();
+  } catch (err) {
+    setStatus(`fzt.wasm load failed: ${err}`, "err");
+    document.getElementById("loading")?.classList.add("hidden");
+    return;
+  }
+
+  term.loadYAML(SAMPLE_YAML);
+  term.init();
+
+  document.getElementById("loading")?.classList.add("hidden");
+  setStatus("ready");
+  terminalEl.focus();
+}
+
+window.addEventListener("DOMContentLoaded", init);

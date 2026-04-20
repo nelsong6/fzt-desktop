@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# fzt assets downloaded from fzt-browser release via `npm run fetch-fzt`
+# (dev) or build.yml's gh release download step (CI). Not committed —
+# pinning a binary copy would drift from the upstream renderer.
+src/fzt.wasm
+src/fzt-terminal.js
+src/fzt-terminal.css
+src/fzt-web.js

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "fetch-fzt": "gh release download --repo nelsong6/fzt-browser --pattern fzt.wasm --pattern fzt-terminal.js --pattern fzt-terminal.css --pattern fzt-web.js --dir src --clobber"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"

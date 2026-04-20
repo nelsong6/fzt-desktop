@@ -4,29 +4,38 @@
     <meta charset="UTF-8" />
     <title>fzt-desktop</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="styles.css" />
-    <!-- fzt-terminal.css is downloaded from fzt-browser release at build
-         time and copied alongside these files. Dev-only: optional. -->
+    <!-- fzt-terminal.css ships via `npm run fetch-fzt` (dev) or CI. -->
     <link rel="stylesheet" href="fzt-terminal.css" onerror="this.remove()" />
-    <script type="module" src="/main.js" defer></script>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Pixel-art layer — z-index 0, rendered via canvas. Populated by
-         the ambience client once wired. -->
-    <canvas id="ambience-canvas"></canvas>
+    <!-- Ambience pixel-art layer. ambience-client.js auto-wires from
+         the data-ambience attribute and paints entropy-driven effects
+         behind everything else. -->
+    <canvas id="ambience-canvas" data-ambience></canvas>
 
-    <!-- Main app surface — sits above the canvas -->
     <div class="page">
-      <!-- fzt-automate terminal will mount here once fzt.wasm is wired -->
-      <div id="terminal" class="fzt-terminal-window">
-        <pre id="terminal-content">fzt-desktop scaffold — fzt.wasm integration pending</pre>
+      <!-- fzt-automate terminal mounts here via createFztWeb. -->
+      <div class="terminal-window fzt-terminal-window">
+        <pre id="terminal" tabindex="0"></pre>
       </div>
 
-      <!-- Status line for silent command execution feedback -->
+      <!-- Status line: command-execution feedback from run_command. -->
       <div id="status" class="status-line"></div>
     </div>
 
-    <!-- Loading overlay, hidden once fzt.wasm boots -->
-    <div id="loading" class="loading hidden">Loading fzt...</div>
+    <!-- Overlay visible until fzt.wasm finishes booting. -->
+    <div id="loading" class="loading">Loading fzt...</div>
+
+    <!-- Go's WASM runtime (required for fzt.wasm). -->
+    <script src="wasm_exec.js"></script>
+
+    <!-- Ambience effect library + auto-wiring client. Order matters:
+         sim.js registers effect classes, client.js uses them. -->
+    <script src="ambience-sim.js"></script>
+    <script src="ambience-client.js"></script>
+
+    <!-- App entry — loads fzt.wasm, mounts terminal, routes actions. -->
+    <script type="module" src="/main.js" defer></script>
   </body>
 </html>
